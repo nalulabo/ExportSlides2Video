@@ -1,1 +1,3 @@
-* diff=sjis
+vbs diff=sjis
+bas diff=sjis
+bat diff=sjis

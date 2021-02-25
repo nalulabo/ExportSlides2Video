@@ -15,19 +15,22 @@ Const msoTrue = -1
 Const msoFalse = 0
 Const msoMedia = 16
 Const msoFileDialogFilePicker = 3
+Const msoFileDialogSaveAs = 2
 Const INFINITE = -1
+Const IDENTITY_NAME = "ExportSlides2Video"
 
-Sub ExportSlides2Video(ppt)
+Function ExportSlides2Video(ppt, noVideo)
     '''*****************************************
     ''' ExportSlides2Video
     ''' param: Presentation(Presentation-Object)
+    ''' param: dont export video (boolean)
     '''*****************************************
     
-    Dim outputDir: outputDir = fso.GetTempName()
+    Dim outputDir: outputDir = fso.GetAbsolutePathName(fso.GetTempName())
     Dim sl
-    Dim mp4name
+    Dim exportName
     
-    mp4name = GetVideoName(ppt.FullName)
+    exportName = GetExportName(ppt.FullName, noVideo)
     
     If Not fso.FileExists(outputDir) Then
         fso.CreateFolder(outputDir)
@@ -38,16 +41,22 @@ Sub ExportSlides2Video(ppt)
         EmbedNoteVoices sl, outputDir
         sl.SlideShowTransition.AdvanceTime = 10
     Next
-    WScript.Echo "読み上げ一時ファイルを除去しています..."
+    WriteHost "読み上げ一時ファイルを除去しています..."
     fso.DeleteFolder(outputDir)
-    WScript.Echo "動画の書き出しを開始します... ===> [ " & mp4name & " ]"
-    ppt.CreateVideo mp4name, , , 1080, ,80
-    
-    do Until ppt.CreateVideoStatus = ppMediaTaskStatusDone
-        WScript.Sleep 500
-    Loop
-    WScript.Echo "動画の書き出しを完了しました。"
-End Sub
+    If noVideo Then
+        WriteHost "動画は出力しません。"
+        WScript.Echo "PowerPointファイルに音声を埋め込みました。"
+    Else
+        WriteHost "動画の書き出しを開始します... ===> [ " & exportName & " ]"
+        ppt.CreateVideo exportName, , , 1080, ,80
+        
+        do Until ppt.CreateVideoStatus = ppMediaTaskStatusDone
+            WScript.Sleep 500
+        Loop
+        WScript.Echo "動画の書き出しを完了しました。"
+    End If
+    ExportSlides2Video = exportName
+End Function
 
 Function GetNoteText(target)
     '''*****************************************
@@ -60,16 +69,26 @@ Function GetNoteText(target)
 
 End Function
 
-Function GetVideoName(target)
+Function IIf(condition, trueCase, falseCase)
+    If condition Then
+        IIf = trueCase
+    Else
+        IIf = falseCase
+    End If
+End Function
+
+Function GetExportName(target, isPptx)
     '''*****************************************
-    ''' GetVideoName
-    ''' param: pptx file path(String)
-    ''' return: mp4 file path(String)
-    ''' ファイル命名規約は "{powerpoint-file}_yyyy-MM-dd-hh-mm-ss.mp4"
+    ''' GetExportName
+    ''' param: file path(String)
+    ''' param: is pptx ?(boolean)
+    ''' return: rule based file path(String)
+    ''' ファイル命名規約は "{powerpoint-file}_yyyy-MM-dd-hh-mm-ss.{extention}"
     '''*****************************************
     
     Dim timestamp: timestamp = Replace(Replace(Replace(Now, "/", "-"), ":", "-"), " ", "-")
-    GetVideoName = fso.BuildPath(fso.GetParentFolderName(target), fso.GetBaseName(target) & "_" & timestamp & ".mp4")
+    Dim ext: ext = IIf(isPptx, ".pptx", ".mp4")
+    GetExportName = fso.BuildPath(fso.GetParentFolderName(target), fso.GetBaseName(target) & "_" & timestamp & ext)
     
 End Function
 
@@ -107,7 +126,7 @@ Sub CreateSpeakNote(Name, text, output)
     
     Set sapi.AudioOutputStream = stream
     sapi.Speak text
-    WScript.Echo "読み上げています..."
+    WriteHost "読み上げています..."
     sapi.WaitUntilDone(INFINITE)
     stream.Close
     
@@ -121,41 +140,74 @@ Sub EmbedNoteVoices(target, wavDir)
     '''*****************************************
     ''' EmbedNoteVoices
     ''' param: slide(Slide Object), file path(String)
-    ''' remark: もとからスライドに存在している音声メディアは除去されます
-    ''' todo: もとから存在している音声メディアを残しながら読み上げだけ除去できないか
+    ''' 指定された代替テキストの音声メディアオブジェクトを除去して埋め込みます
     '''*****************************************
     Dim wavPath: wavPath = JoinPath(wavDir, target.Name)
-    Dim sh
+    Dim sh, wav
     
     For Each sh In target.Shapes
         If sh.Type = msoMedia Then
-            If sh.MediaType = ppMediaTypeSound Then
+            If sh.MediaType = ppMediaTypeSound And sh.AlternativeText = IDENTITY_NAME Then
                 sh.Delete
             End If
         End If
     Next
-    WScript.Echo "読み上げ結果の音声ファイル：[ " & wavPath & " ]"
+    WriteHost "読み上げ結果の音声ファイル：[ " & wavPath & " ]"
     WScript.Sleep 1000
-    WScript.Echo "スライドに音声を埋め込んでいます..."
-    With target.Shapes.AddMediaObject2(wavPath, False, True, 10, 10).AnimationSettings.PlaySettings
+    WriteHost "スライドに音声を埋め込んでいます..."
+    Set wav = target.Shapes.AddMediaObject2(wavPath, False, True, 10, 10)
+    With wav.AnimationSettings.PlaySettings
         .PlayOnEntry = msoTrue
         .HideWhileNotPlaying = msoTrue
     End With
+    wav.AlternativeText = IDENTITY_NAME
 End Sub
 
 Sub Main()
     Dim arg: Set arg = WScript.Arguments
     Dim target: target = ""
     Dim pp
+    Dim noVideo: noVideo = False
+    Dim exportedName
+    Const askVideo = "動画書き出しを行います。音声埋め込みまでにとどめたい場合は「いいえ」をクリックしてください。"
     If arg.Count = 0 Then
         WScript.Echo "PowerPointドキュメントファイルを指定してください。"
-        Exit Sub
+        pptx.Activate()
+        With pptx.FileDialog(msoFileDialogFilePicker)
+            .Filters.Add "*.pptx", "*.pptx"
+            .ButtonName = "変換する"
+            .InitialFileName = JoinPath(fso.GetParentFolderName(WScript.ScriptFullName), "presentation.pptx")
+            .Title = "マークダウンからPowerPointを作成して動画に書き出します"
+            If .Show Then
+                target = .SelectedItems(1)
+            Else
+                Exit Sub
+            End If
+        End With
+        If MsgBox(askVideo, vbYesNo, IDENTITY_NAME) = vbNo Then
+            noVideo = True
+        End If
+    Else
+        target = fso.GetAbsolutePathName(arg.Item(0))
     End If
-    target = arg.Item(0)
-    WScript.Echo "変換ファイル：[ " & target & " ]"
+    WriteHost "変換ファイル：[ " & target & " ]"
     Set pp = pptx.Presentations.Open(target)
-    ExportSlides2Video pp
-    pp.Saved = True
+    pp.AutoSaveOn = False
+    exportedName = ExportSlides2Video(pp, noVideo)
+    If noVideo Then
+        With pptx.FileDialog(msoFileDialogSaveAs)
+            .ButtonName = "保存する"
+            .InitialFileName = JoinPath(fso.GetParentFolderName(WScript.ScriptFullName), exportedName)
+            .Title = "保存先を指定してください"
+            If .Show Then
+                pp.SaveAs(.SelectedItems(1))
+            Else
+                pp.Saved = True
+            End If
+        End With
+    Else
+        pp.Saved = True
+    End IF
     pp.Close
 End Sub
 
@@ -172,18 +224,17 @@ Sub PostRequire()
     Set pptx = Nothing
 End Sub
 
+Sub WriteHost(message)
+    If isCui Then
+        WScript.Echo message
+    End If
+End Sub
+
 Function IsCscript()
     IsCscript = Instr(LCase(WScript.FullName), "cscript.exe") > 0
 End Function
 
-'''***
-''' WScript.exeでPowerPointのインスタンス化が拒否されるようなので
-''' CScript.exeのみに実行を制限することにした
-''' todo: ほんとうに拒否されるのか要確認
-If IsCscript() Then
-    Call PreRequire()
-    Call Main()
-    Call PostRequire()
-Else
-    WScript.Echo "コマンドラインから実行してください。" & VbCrLf & "cscript.exe " & WScript.ScriptName & " [PowerPointファイル]"
-End If
+Dim isCui: isCui = IsCscript()
+Call PreRequire()
+Call Main()
+Call PostRequire()

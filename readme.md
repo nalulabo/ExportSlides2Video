@@ -1,63 +1,68 @@
-# PowerPoint�X���C�h��ǂݏグ�t������ɕϊ�����c�[��
+# PowerPointスライドを読み上げ付き動画に変換するツール
 
-## ����͂Ȃ�ł���
+## これはなんですか
 
-�b���������Ƃ𔭕\�҃m�[�g�ɏ����Ă��������Ńv���[���e�[�V����������쐬���܂��B
-PowerPoint�X���C�h�t�@�C���̊e�X���C�h�ɋL�����ꂽ���\�҃m�[�g��ǂݏグ�܂��B
-�ǂݏグ���������X���C�h�ɖ��ߍ��݂܂��B
-�����āA����t�@�C���ɏ����o�����s���܂��B
+話したいことを発表者ノートに書いておくだけでプレゼンテーション動画を作成します。
+PowerPointスライドファイルの各スライドに記入された発表者ノートを読み上げます。
+読み上げた音声をスライドに埋め込みます。
+そして、動画ファイルに書き出しを行います。
 
-## �ړI
+## 目的
 
-�����쐬�����œ�����쐬�ł��邽�߁A���擊�e�T�C�g�Ȃǂ𗘗p�������L���ȒP�ɂȂ�܂��B
-�܂��A���\�̗��K�����邱�ƂȂ�����ɏ����o�����Ƃ��ł��邽�ߎ��ԒZ�k�ɂ��Ȃ���܂��B
+資料作成だけで動画を作成できるため、動画投稿サイトなどを利用した共有が簡単になります。
+また、発表の練習をすることなく動画に書き出すことができるため時間短縮にもつながります。
 
-## �g����
+## 使い方
 
-### PowerPoint�}�N��
+### PowerPointマクロ
 
-�W�����W���[���`���iExportSlides2Video.bas�j�𓮉�ɂ�����PowerPoint�t�@�C���ɓǂݍ��݂܂��B
+標準モジュール形式（ExportSlides2Video.bas）を動画にしたいPowerPointファイルに読み込みます。
 
-+ Alt�{F11�L�[�𓯎��ɉ�����VisualBasic for Application Editor���N�����܂�
-+ ��ʏ㕔���j���[����u�t�@�C���v���u�t�@�C���̃C���|�[�g�v���N���b�N���܂�
-+ �W�����W���[�����w�肵�܂�
-+ PowerPoint�̉�ʏ㕔���j���[����u�\���v���u�}�N���v���N���b�N���܂�
-+ �_�C�A���O���\�����ꂽ�Ȃ�����uExportSlides2Video�v��I�����Ď��s���܂�
++ Alt＋F11キーを同時に押してVisualBasic for Application Editorを起動します
++ 画面上部メニューから「ファイル」→「ファイルのインポート」をクリックします
++ 標準モジュールを指定します
++ PowerPointの画面上部メニューから「表示」→「マクロ」をクリックします
++ ダイアログが表示されたなかから「ExportSlides2Video」を選択して実行します
 
 ### VBS
 
-�R�}���h���C������VBS�t�@�C���iExportSlides2Video.vbs�j�����s���܂��B
+#### ダブルクリックして対話形式で実行したいとき
 
-+ PowerShell�������̓R�}���h�v�����v�g���N�����܂��i��ʉE���́u�����ɓ��͂��Č����v�Ɂupowershell�v�Ɠ��͂��ĕ\�����ꂽ���̂��N���b�N���܂��j
-+ ���̂悤�Ɏw�肵�ăX�N���v�g�����s���܂�
+ファイルをダブルクリックして、画面に表示されるダイアログなどにしたがって実行していきます。
+
+#### コマンドラインから一括実行したいとき
+
+コマンドラインからVBSファイル（ExportSlides2Video.vbs）を実行します。
+
++ PowerShellもしくはコマンドプロンプトを起動します（画面右下の「ここに入力して検索」に「powershell」と入力して表示されたものをクリックします）
++ 次のように指定してスクリプトを実行します
 
 ```powershell
-cscript ExportSlides2Video.vbs [����ɂ�����PowerPoint�t�@�C���ւ̃p�X]
+cscript ExportSlides2Video.vbs [動画にしたいPowerPointファイルへのパス]
 ```
 
-����ɂ������t�@�C���ւ̃p�X�͎��̂悤�ɂ���ƊȒP�ɓ��͂��邱�Ƃ��ł��܂��B
+動画にしたいファイルへのパスは次のようにすると簡単に入力することができます。
 
-+ PowerShell��R�}���h�v�����v�g�փt�@�C�����h���b�O�A���h�h���b�v����
-+ ����ɂ������t�@�C����I������Shift�L�[�������Ȃ���E�N���b�N�A�\������郁�j���[����u�p�X�̃R�s�[�v���N���b�N����PowerShell��R�}���h�v�����v�g�֓\��t����i�E�N���b�N���邩Ctrl�{C�L�[�������j
++ PowerShellやコマンドプロンプトへファイルをドラッグアンドドロップする
++ 動画にしたいファイルを選択してShiftキーを押しながら右クリック、表示されるメニューから「パスのコピー」をクリックしてPowerShellやコマンドプロンプトへ貼り付ける（右クリックするかCtrl＋Cキーを押す）
 
-## ����m�F��
+## 動作確認環境
 
-����|��
+項目|環境
 ----|----
 OS|Wwindows10
 PowerPoint|16.0.13628.20318(64bit)
 
-## ���C�Z���X
+## ライセンス
 
-MIT���̗p���Ă��܂��B
+MITを採用しています。
 
-## ����̗\��
+## 今後の予定
 
-���ɍl���Ă��܂��񂪁AWScript.exe�Ŏ��s�����Ƃ��̓t�@�C���_�C�A���O��\������PowerPoint�t�@�C�����w�肵��cscript�Ŏ������Ď��s����悤�ɂ������Ǝv���Ă��܂��B
-���̂ق����֗������ł��̂ŁB
+PythonやPowerShellなどへの移植をするかどうか。
 
-## ���ϔŁA������ւ̈ڐA�ɂ���
+## 改変版、他言語への移植について
 
-COM�𗘗p���Ă��邽�߁A�������Windows10�ł����Python��Ruby�APowerShell�Ȃǂ��܂��܂ȃX�N���v�g����ŏ����������Ƃ��ł��܂��B���������������ł����J����������悤�ł�����note���ł��Љ�����Ǝv���܂��̂ŁA�����Ă��������B
+COMを利用しているため、事実上はWindows10であればPythonやRuby、PowerShellなどさまざまなスクリプト言語で書き直すことができます。もし書き直した版を公開いただけるようでしたらnote等でご紹介したいと思いますので、教えてください。
 
 [https://note.com/nalulabo](https://note.com/nalulabo)
