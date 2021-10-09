@@ -18,6 +18,50 @@ Const msoFileDialogFilePicker = 3
 Const msoFileDialogSaveAs = 2
 Const INFINITE = -1
 Const IDENTITY_NAME = "ExportSlides2Video"
+Const WAV_EXT = ".wav"
+
+Function GetWavLength(outName)
+    Dim sh: Set sh = CreateObject("Shell.Application")
+    Dim outdir: outdir = fso.GetParentFolderName(outName)
+    Dim name: name = fso.GetFileName(outName)
+    Dim ns: Set ns = sh.Namespace(outdir)
+    Dim f: f = ns.ParseName(name)
+    Dim timeLength: timeLength = ns.GetDetailsOf(f, 27)
+    Dim times: times = Split(timeLength, ":")
+    If Ubound(times) + 1 = 3 Then
+        GetWavLength = CInt(times(0)) * 3600 + CInt(times(1)) * 60 + CInt(times(2))
+    Else
+        GetWavLength = 10
+    End If
+End Function
+
+Sub TreatSlide(slide, outputDir)
+    Dim note: note = GetNoteText(slide)
+    If Trim(note) <> "" Then
+        Dim outName: outName = CreateSpeakNote(slide.Name, note, outputDir)
+        Dim timeLength: timeLength = GetWavLength(outName)
+        With slide.SlideShowTransition
+            .AdvanceOnTime = True
+            .AdvanceTime = timeLength
+        End With
+        EmbedNoteVoices slide, outputDir
+    End If
+End Sub
+
+Sub Export(ppt, exportName, noVideo)
+    If noVideo Then
+        WriteHost "動画は出力しません。"
+        WScript.Echo "PowerPointファイルに音声を埋め込みました。"
+    Else
+        WriteHost "動画の書き出しを開始します... ===> [ " & exportName & " ]"
+        ppt.CreateVideo exportName, True, , 1080, ,80
+        
+        do Until ppt.CreateVideoStatus = ppMediaTaskStatusDone
+            WScript.Sleep 500
+        Loop
+        WScript.Echo "動画の書き出しを完了しました。"
+    End If
+End Sub
 
 Function ExportSlides2Video(ppt, noVideo)
     '''*****************************************
@@ -37,24 +81,11 @@ Function ExportSlides2Video(ppt, noVideo)
     End If
     
     For Each sl In ppt.Slides
-        CreateSpeakNote sl.Name, GetNoteText(sl), outputDir
-        EmbedNoteVoices sl, outputDir
-        sl.SlideShowTransition.AdvanceTime = 10
+        TreatSlide sl, outputDir
     Next
     WriteHost "読み上げ一時ファイルを除去しています..."
     fso.DeleteFolder(outputDir)
-    If noVideo Then
-        WriteHost "動画は出力しません。"
-        WScript.Echo "PowerPointファイルに音声を埋め込みました。"
-    Else
-        WriteHost "動画の書き出しを開始します... ===> [ " & exportName & " ]"
-        ppt.CreateVideo exportName, , , 1080, ,80
-        
-        do Until ppt.CreateVideoStatus = ppMediaTaskStatusDone
-            WScript.Sleep 500
-        Loop
-        WScript.Echo "動画の書き出しを完了しました。"
-    End If
+    Export ppt, exportName, noVideo
     ExportSlides2Video = exportName
 End Function
 
@@ -103,7 +134,7 @@ Function JoinPath(parent, child)
 
 End Function
 
-Sub CreateSpeakNote(Name, text, output)
+Function CreateSpeakNote(Name, text, output)
     '''*****************************************
     ''' CreateSpeakNote
     ''' param: slide name(String), text to speak(String), file path(String)
@@ -117,7 +148,7 @@ Sub CreateSpeakNote(Name, text, output)
     
     Dim sapi: Set sapi = CreateObject("SAPI.SpVoice")
     Dim stream: Set stream = CreateObject("SAPI.SpFileStream")
-    Dim outfile: outfile = JoinPath(output, Name)
+    Dim outfile: outfile = JoinPath(output, Name & WAV_EXT)
     
     Set sapi.Voice = sapi.GetVoices("Language=411; Gender=Female")(0)
     
@@ -132,8 +163,8 @@ Sub CreateSpeakNote(Name, text, output)
     
     Set stream = Nothing
     Set sapi = Nothing
-    
-End Sub
+    CreateSpeakNote = outfile    
+End Function
 
 
 Sub EmbedNoteVoices(target, wavDir)
@@ -142,7 +173,7 @@ Sub EmbedNoteVoices(target, wavDir)
     ''' param: slide(Slide Object), file path(String)
     ''' 指定された代替テキストの音声メディアオブジェクトを除去して埋め込みます
     '''*****************************************
-    Dim wavPath: wavPath = JoinPath(wavDir, target.Name)
+    Dim wavPath: wavPath = JoinPath(wavDir, target.Name & WAV_EXT)
     Dim sh, wav
     
     For Each sh In target.Shapes
@@ -157,8 +188,8 @@ Sub EmbedNoteVoices(target, wavDir)
     WriteHost "スライドに音声を埋め込んでいます..."
     Set wav = target.Shapes.AddMediaObject2(wavPath, False, True, 10, 10)
     With wav.AnimationSettings.PlaySettings
-        .PlayOnEntry = msoTrue
-        .HideWhileNotPlaying = msoTrue
+        .PlayOnEntry = True
+        .HideWhileNotPlaying = True
     End With
     wav.AlternativeText = IDENTITY_NAME
 End Sub
